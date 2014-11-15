@@ -1,0 +1,20 @@
+#!upstart
+# mailcatcher - mock smtp server
+#
+# mailCatcher runs a super simple SMTP server which catches any
+# message sent to it to display in a web interface.
+
+description     "mock smtp server"
+
+start on startup
+stop on shutdown
+
+setuid vagrant
+setgid vagrant
+
+script
+ exec nohup /usr/local/bin/mailcatcher --ip=0.0.0.0 -f  >> /var/log/mailcatcher/mailcatcher.log 2>&1
+end script
+
+
+

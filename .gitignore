@@ -1,0 +1,14 @@
+.vagrant
+.idea
+.librarian
+/puppet/modules/
+/puppet/.tmp
+Puppetfile.lock
+*DS_STORE
+history.yml
+/src/
+
+packer_cache
+output-*
+*.box
+*.log
