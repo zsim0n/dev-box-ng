@@ -219,8 +219,13 @@ rbenv::install { "vagrant":
 rbenv::compile { "2.1.4":
   user => "vagrant",
   home => "/home/vagrant",
+  global => true,
 }
 
+rbenv::gem { "jekyll":
+  user => "vagrant",
+  ruby => "2.1.4",
+}
 
 package { 'compass':
   ensure   => 'installed',
