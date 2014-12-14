@@ -47,7 +47,7 @@ define install_npm_package {
     require => Profile::Script['npm'],
   }
 }
-$npm_packages = ['yo','generator-angular', 'generator-bootstrap', 'generator-meanjs','generator-gruntfile','serve']
+$npm_packages = ['yo','generator-angular', 'generator-bootstrap', 'generator-meanjs','generator-gruntfile','serve','bower','grunt-cli']
 
 install_npm_package { $npm_packages : }
 
@@ -110,7 +110,7 @@ augeas { 'php5-xdebug':
                 'set XDebug/xdebug.remote_port 9000',
                 'set XDebug/xdebug.profiler_enable 1',
                 'set XDebug/xdebug.profiler_output_dir "/tmp"',
-                'set XDebug/xdebug.max_nesting_level 255'],
+                'set XDebug/xdebug.max_nesting_level 400'],
   require => Package["php5-xdebug"],
   notify  => Service["apache"],
 
@@ -134,6 +134,10 @@ file { '/var/www':
 # apache
 class { 'apache':
   process_user => 'vagrant',
+}
+
+apache::dotconf { 'custom':
+  content => 'EnableSendfile Off',
 }
 
 apache::module { 'rewrite': }
@@ -207,7 +211,6 @@ exec{ 'wget http://www.adminer.org/latest.php -O /usr/share/adminer/index.php':
   returns => [ 0, 4 ],
 }
 
-
 # ruby & rbenv
 
 rbenv::install { "vagrant":
@@ -227,17 +230,28 @@ rbenv::gem { "jekyll":
   ruby => "2.1.4",
 }
 
-package { 'compass':
-  ensure   => 'installed',
-  provider => 'gem',
+rbenv::gem { "compass":
+  user => "vagrant",
+  ruby => "2.1.4",
 }
+
+#rbenv::gem { "mailcatcher":
+#  user => "vagrant",
+#  ruby => "2.1.4",
+#  source => "https://github.com/sj26/mailcatcher"
+#}
+
+# package { 'compass':
+#  ensure   => 'installed',
+#provider => 'gem',
+# }
 
 # mailcatcher
 
-  package { 'mailcatcher':
-    ensure   => 'present',
-    provider => 'gem',
-  }
+package { 'mailcatcher':
+  ensure   => 'present',
+  provider => 'gem',
+}
 
   file {'/etc/init/mailcatcher.conf':
     ensure  => 'file',
