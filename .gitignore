@@ -5,4 +5,4 @@
 Puppetfile.lock
 *DS_STORE
 src/
-
+*.box

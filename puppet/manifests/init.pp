@@ -150,6 +150,16 @@ apache::vhost { '000-default':
    aliases 					 => ['/adminer /usr/share/adminer']
 }
 
+file { "/var/lock/apache2":
+  ensure => directory,
+  owner => vagrant
+}
+
+exec { "ApacheUserChange" :
+  command => "sed -i 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=vagrant/ ; s/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=vagrant/' /etc/apache2/envvars",
+  require => [ Package["apache"], File["/var/lock/apache2"] ],
+  notify  => Service['apache'],
+}
 # mysql 
 
 class { "mysql":
