@@ -116,8 +116,9 @@ augeas { 'php5-xdebug':
 
 }
 
-#  var/www symlinking
-file { "/vagrant/src":
+#  var/www symlink
+
+file { "/vagrant":
   ensure  => "directory",
   require => Package["php5"],
   before => File[ '/var/www'],
@@ -125,8 +126,8 @@ file { "/vagrant/src":
 
 file { '/var/www':
   ensure  => "link",
-  target  => "/vagrant/src",
-  require => File['/vagrant/src'],
+  target  => "/vagrant",
+  require => File['/vagrant'],
   notify  => Service["apache"],
   force   => true,
 }
@@ -194,6 +195,13 @@ exec { 'wget https://raw.githubusercontent.com/drush-ops/drush/master/drush.comp
   cwd => '/etc/bash_completion.d',
   creates => "/etc/bash_completion.d/drush.complete.sh",
   require => Package['drush'],
+}
+
+# wp-cli
+
+exec { 'wpcli_install':
+  command => 'curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && sudo mv wp-cli.phar /usr/local/bin/wp && sudo chmod a+x /usr/local/bin/wp',
+  require => Package['curl', 'php'],
 }
 
 # composer
