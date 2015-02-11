@@ -13,5 +13,5 @@ setuid vagrant
 setgid vagrant
 
 script
- exec nohup /usr/local/bin/mailcatcher --ip=0.0.0.0 -f  >> /var/log/mailcatcher/mailcatcher.log 2>&1
+ exec nohup /home/vagrant/.rbenv/shims/mailcatcher --ip=0.0.0.0 -f  >> /var/log/mailcatcher/mailcatcher.log 2>&1
 end script
