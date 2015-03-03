@@ -11,7 +11,7 @@ exec { 'apt-update':
 }
 
 # ensure base packages
-$packages = ['build-essential', 'keychain', 'git','curl', 'libxml2', 'libxml2-dev', 'libxslt1-dev', 'pwgen']
+$packages = ['build-essential', 'keychain', 'git','curl', 'libxml2', 'libxml2-dev', 'libxslt1-dev', 'pwgen', 'mytop','xsltproc']
 
 package { $packages:
   require => Exec['apt-update'],
@@ -54,7 +54,7 @@ package {'apache2-utils':
 
 # php
 
-$phpModules = [ 'fpm','imagick', 'xdebug', 'curl', 'mysql', 'cli', 'intl', 'mcrypt', 'memcache','gd']
+$phpModules = [ 'fpm','imagick', 'xdebug', 'curl', 'mysql', 'cli', 'intl', 'mcrypt', 'memcache','gd', 'xsl']
 
 class { 'php':
   service         => 'apache',
