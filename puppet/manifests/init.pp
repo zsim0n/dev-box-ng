@@ -267,39 +267,22 @@ exec { 'git clone https://github.com/zsim0n/dotfiles.git && cd /home/vagrant/dot
 }
 
 # node
+$npm_packages = ['yo', 'serve','bower','grunt-cli']
 
-class { 'nodejs':
-  manage_repo => true,
-  require     => Exec['apt-update'],
-}
-
+apt::ppa { 'ppa:rwky/nodejs': } ->
+package { 'nodejs' :
+  require => Exec['apt-update'],
+}->
 exec { 'npm-post-install':
   command => 'npm install -g npm && sudo npm -g config set prefix /home/vagrant/npm',
-  require => Class['nodejs'],
-}
-
-file { '/etc/profile.d/nodejs.sh':
-  ensure  => 'absent',
-  require => Class['nodejs'],
-}
-
+}->
 profile::script { 'npm':
   priority => '050',
   content  => template('/vagrant/puppet/templates/npm.sh.erb'),
-  require  => Exec['npm-post-install'],
+}->
+package { $npm_packages:
+  provider => 'npm',
 }
-
-define install_npm_package {
-  exec { "npm install -g $name":
-    cwd     => '/home/vagrant',
-    user    => 'vagrant',
-    require => Profile::Script['npm'],
-  }
-}
-$npm_packages = ['yo','generator-angular', 'generator-bootstrap', 'generator-meanjs','generator-gruntfile','serve','bower','grunt-cli']
-
-install_npm_package { $npm_packages : }
-
 
 # mondgodb
 
@@ -307,6 +290,6 @@ class {'::mongodb::globals':
   manage_package_repo => true,
 }->
 class {'::mongodb::server':
-  config => '/etc/mongod.conf',
+  config     => '/etc/mongod.conf',
 }->
 class {'::mongodb::client': }
