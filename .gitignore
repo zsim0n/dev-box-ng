@@ -4,5 +4,8 @@
 /puppet/.tmp
 Puppetfile.lock
 *DS_STORE
-src/
+*.csv
+_save
+kibana/
 *.box
+/data/

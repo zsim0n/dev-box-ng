@@ -6,7 +6,13 @@ Package {
   ensure => 'present',
 }
 
-exec { 'apt-update':
+class { 'apt':
+  update => {
+    frequency => 'always',
+  },
+}
+
+exec { 'apt-get update':
   command => '/usr/bin/apt-get update -y',
 }
 
@@ -14,13 +20,114 @@ exec { 'apt-update':
 $packages = ['build-essential', 'keychain', 'git','curl', 'libxml2', 'libxml2-dev', 'libxslt1-dev', 'pwgen', 'mytop','xsltproc']
 
 package { $packages:
-  require => Exec['apt-update'],
+  require => Exec['apt-get update'],
+}
+# dotfiles
+
+exec { 'dotfiles':
+  command => '/usr/bin/git clone https://github.com/zsim0n/dotfiles.git && cd /home/vagrant/dotfiles && chmod +x ./bootstrap.sh && ./bootstrap.sh -f && rm -Rf /home/vagrant/dotfiles',
+  cwd  => '/home/vagrant',
+  user => 'vagrant',
+  require => Exec['apt-get update']
+}
+
+
+# Java is required
+class { 'java': }
+
+# Elasticsearch
+
+class { 'elasticsearch':
+  manage_repo  => true,
+  repo_version => '1.5',
+}
+
+elasticsearch::instance { 'es-01':
+  config => { 
+  'cluster.name' => 'vagrant_elasticsearch',
+  'index.number_of_replicas' => '0',
+  'index.number_of_shards'   => '1',
+  'network.host' => '0.0.0.0'
+  },        # Configuration hash
+  init_defaults => { }, # Init defaults hash
+  before => Exec['kibana-start']
+}
+
+elasticsearch::plugin{'royrusso/elasticsearch-HQ':
+  module_dir => 'HQ',
+  instances  => 'es-01'
+}
+
+# Logstash
+
+class { 'logstash':
+#  autoupgrade  => true,
+  ensure       => 'present',
+  manage_repo  => true,
+  repo_version => '1.4',
+  status => 'disabled',
+  require      => [ Class['java'], Class['elasticsearch']],
+}
+
+
+file { '/etc/profile.d/logstash-path.sh':
+    mode    => 644,
+    content => 'PATH=$PATH:/opt/logstash/bin',
+    require => Class['logstash'],
+}
+
+# mysql
+
+class { 'mysql':
+  root_password => 'mask',
+}
+
+mysql::grant { 'vagrant':
+  mysql_user       => 'vagrant',
+  mysql_password   => 'vagrant',
+  mysql_privileges => 'ALL',
+  mysql_db         => '*',
+}
+
+file { '/home/vagrant/.my.cnf' :
+  ensure  => present,
+  content => template('/vagrant/puppet/templates/my.cnf.erb'),
+  owner   => 'vagrant',
+  group   => 'vagrant',
+}
+
+# Kibana
+
+file { '/home/vagrant/kibana':
+  ensure => 'directory',
+  group  => 'vagrant',
+  owner  => 'vagrant',
+}
+
+exec { 'kibana-download':
+  command => '/usr/bin/curl -L https://download.elasticsearch.org/kibana/kibana/kibana-4.0.2-linux-x64.tar.gz | /bin/tar xvz -C /home/vagrant/kibana',
+  require => [ Package['curl'], File['/home/vagrant/kibana'],Class['elasticsearch'] ],
+  timeout     => 1800
+}
+
+exec {'kibana-start':
+  command => '/bin/sleep 10 && /home/vagrant/kibana/kibana-4.0.2-linux-x64/bin/kibana & ',
+  require => [ Exec['kibana-download']]
+}
+
+# nodejs
+$npm_packages = ['yo', 'serve','bower','grunt-cli']
+
+class {'nodejs': 
+} ->
+package { $npm_packages:
+  provider => 'npm',
 }
 
 # apache
 class { 'apache':
   process_user => 'vagrant',
-  require      => Exec['apt-update'],
+  require      => Exec['apt-get update'],
 }
 
 apache::dotconf { 'custom':
@@ -60,7 +167,7 @@ class { 'php':
   service         => 'apache',
   install_options => [],
   notify          => Service['apache'],
-  require         => [ Package['apache'], Exec['apt-update'] ],
+  require         => [ Package['apache'], Exec['apt-get update'] ],
 }
 
 php::module { $phpModules: }
@@ -114,7 +221,6 @@ augeas { 'php5-xdebug':
                 'set XDebug/xdebug.max_nesting_level 400'],
   require => Package['php5-xdebug'],
   notify  => Service['apache'],
-
 }
 
 #  var/www symlink
@@ -131,26 +237,6 @@ file { '/var/www':
   require => File['/vagrant'],
   notify  => Service['apache'],
   force   => true,
-}
-
-# mysql
-
-class { 'mysql':
-  root_password => 'mask',
-}
-
-mysql::grant { 'vagrant':
-  mysql_user       => 'vagrant',
-  mysql_password   => 'vagrant',
-  mysql_privileges => 'ALL',
-  mysql_db         => '*',
-}
-
-file { '/home/vagrant/.my.cnf' :
-  ensure  => present,
-  content => template('/vagrant/puppet/templates/my.cnf.erb'),
-  owner   => 'vagrant',
-  group   => 'vagrant',
 }
 
 # drush
@@ -209,7 +295,7 @@ rbenv::install { 'vagrant':
   rc    => '.bash_profile',
 }
 
-rbenv::compile { '2.1.4':
+rbenv::compile { '2.2.2':
   user   => 'vagrant',
   home   => '/home/vagrant',
   global => true,
@@ -217,22 +303,22 @@ rbenv::compile { '2.1.4':
 
 rbenv::gem { 'jekyll':
   user => 'vagrant',
-  ruby => '2.1.4',
+  ruby => '2.2.2',
 }
 
 rbenv::gem { 'compass':
   user => 'vagrant',
-  ruby => '2.1.4',
+  ruby => '2.2.2',
 }
 
 rbenv::gem { 'yaml-lint':
   user => 'vagrant',
-  ruby => '2.1.4',
+  ruby => '2.2.2',
 }
 
 rbenv::gem { 'mailcatcher':
   user   => 'vagrant',
-  ruby   => '2.1.4',
+  ruby   => '2.2.2',
   source => 'https://github.com/sj26/mailcatcher',
 }
 
@@ -259,37 +345,3 @@ service { 'mailcatcher':
   require    => File['/etc/init/mailcatcher.conf'],
 }
 
-# dotfiles
-
-exec { 'git clone https://github.com/zsim0n/dotfiles.git && cd /home/vagrant/dotfiles && chmod +x ./bootstrap.sh && ./bootstrap.sh -f && rm -Rf /home/vagrant/dotfiles':
-  cwd  => '/home/vagrant',
-  user => 'vagrant',
-}
-
-# node
-$npm_packages = ['yo', 'serve','bower','grunt-cli']
-
-apt::ppa { 'ppa:rwky/nodejs': } ->
-package { 'nodejs' :
-  require => Exec['apt-update'],
-}->
-exec { 'npm-post-install':
-  command => 'npm install -g npm && sudo npm -g config set prefix /home/vagrant/npm',
-}->
-profile::script { 'npm':
-  priority => '050',
-  content  => template('/vagrant/puppet/templates/npm.sh.erb'),
-}->
-package { $npm_packages:
-  provider => 'npm',
-}
-
-# mondgodb
-
-class {'::mongodb::globals':
-  manage_package_repo => true,
-}->
-class {'::mongodb::server':
-  config     => '/etc/mongod.conf',
-}->
-class {'::mongodb::client': }
